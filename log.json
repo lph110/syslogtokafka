@@ -1,0 +1,17 @@
+{
+    "TimeFormat":"2006-01-02 15:04:05",
+    "Console": {
+        "level": "ERROR",
+        "color": true 
+    },
+    "File": {
+        "filename": "./logs/run.log",
+        "level": "TRAC",
+        "daily": true,
+        "maxlines": 100000000,
+        "maxsize": 10,
+        "maxdays": -1,
+        "append": true,
+        "permit": "0660"
+    } 
+}

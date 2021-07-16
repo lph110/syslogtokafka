@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>SyslogServer</title>
+		<link rel="stylesheet" href="css/element-ui.css">
+		<script src="js/vue.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/element-ui.js"></script>
+		<script src="js/socket.io-1.2.0.js"></script>
+		<script src="js/echarts.js"></script>
+	</head>
+	<body>
+		<div id="app">
+			<el-card>
+				 
+						<el-card style="margin-bottom: 10px;">
+							<div style="width: 100%;">
+								<el-button type="primary" v-if="connected" size="small" style="width: 200px;">连接成功</el-button>
+								<el-button type="danger" v-else size="small" style="width: 200px;">连接断开</el-button>								
+								<el-tag style="margin-bottom: 10px;" type="success">接收记录数：{{syslogCounts.ReceivedCount}}，缓存：{{syslogCounts.ReceivedCached}}</el-tag>
+								<el-tag style="margin-bottom: 10px;" type="success">写入kafka记录数：{{syslogCounts.WriteToKafkaCount}}</el-tag>
+								</div>
+							<div style="width: 100%;">
+								<el-button type="primary" size="small" style="width: 200px;">启动时间：{{StartTime}}</el-button>
+								<el-tag style="margin-bottom: 10px;">接收峰值：{{syslogLatencys.MaxReceivedLatency}} / {{syslogLatencys.MaxReceivedTime}}</el-tag>
+								
+								<el-tag style="margin-bottom: 10px;">写入kafka峰值：{{syslogLatencys.MaxWriteToKafkaLatency}} / {{syslogLatencys.MaxWriteToKafkaTime}}</el-tag>
+								<el-tag style="margin-bottom: 10px;">CPU：{{syslogCPUMEMLatencys.CPU}}% | Max:{{syslogCPUMEMLatencys.MaxCPU}}% ({{syslogCPUMEMLatencys.MaxCPUTime}})</el-tag>
+								<el-tag style="margin-bottom: 10px;">Mem：{{syslogCPUMEMLatencys.MEM}}% | Max:{{syslogCPUMEMLatencys.MaxMEM}}% ({{syslogCPUMEMLatencys.MaxMEMTime}})</el-tag>
+							</div>
+						</el-card>
+						<el-card>
+							<div id="Latency" style="width:100%;min-width600px;min-height:500px;"></div>
+						</el-card>
+					 
+			</el-card>
+		</div>
+	</body>
+	<script>
+		var app = new Vue({
+			el: '#app',
+			data: function() {
+				return {					
+					connected: false,
+					socket: null,					
+					syslogCounts: {},					
+					myChart: null,
+					syslogLatencys: {},
+					syslogCPUMEMLatencys: {},
+					StartTime:'',
+					option: {
+						tooltip: {
+							trigger: 'axis'
+						},
+						legend: {
+							data: ['接收','Kafka']
+						},
+						grid: {
+							left: '3%',
+							right: '4%',
+							bottom: '3%',
+							containLabel: true
+						},
+						xAxis: {
+							type: 'category',
+							boundaryGap: false,
+							data: []
+						},
+						yAxis: {
+							type: 'value'
+						},
+						series: [{
+								name: '接收',
+								type: 'line',
+								stack: '总量',								
+								data: []
+							},							
+							{
+								name: 'Kafka',
+								type: 'line',
+								stack: '总量', 
+								data: []
+							}
+						]
+					},
+				}
+			},
+			methods: {
+				websocketInit() {
+					var that = this
+
+					that.socket = io()
+					that.socket.on('connect', function(data) {
+						that.connected = true
+						console.log('connect')
+					})
+					that.socket.on('disconnect', function(data) {
+						that.connected = false
+						console.log('disconnect')
+					});
+					 
+					that.socket.on('syslogCounts', (data) => {
+						that.syslogCounts = data
+					});
+					that.socket.on('syslogCPUMEMLatencys', (data) => {
+						that.syslogCPUMEMLatencys = {
+							CPU: data.CPU.toFixed(2),
+							MaxCPU: data.MaxCPU.toFixed(2),
+							MaxCPUTime: data.MaxCPUTime,
+							MEM: data.MEM.toFixed(2),
+							MaxMEM: data.MaxMEM.toFixed(2),
+							MaxMEMTime: data.MaxMEMTime,
+							Time: data.Time,
+						}
+					});
+					that.socket.on('syslogLatencys', (data) => {
+						that.StartTime=data.StartTime
+						that.option.xAxis.data.push(data.Time)
+						that.option.series[0].data.push(data.ReceivedLatency)						
+						that.option.series[1].data.push(data.WriteToKafkaLatency)
+						that.option.xAxis.data = that.option.xAxis.data.slice(-40)
+						that.option.series[0].data = that.option.series[0].data.slice(-40)						
+						that.option.series[1].data = that.option.series[1].data.slice(-40)
+
+						that.myChart.setOption(this.option);
+						setTimeout(function() {
+							window.onresize = function() {
+								that.myChart.resize();
+							}
+						}, 200)
+						that.syslogLatencys = {
+							ReceivedLatency: data.ReceivedLatency,
+							MaxReceivedLatency: data.MaxReceivedLatency,
+							MaxReceivedTime: data.MaxReceivedTime,							
+							WriteToKafkaLatency: data.WriteToKafkaLatency,
+							MaxWriteToKafkaLatency: data.MaxWriteToKafkaLatency,
+							MaxWriteToKafkaTime: data.MaxWriteToKafkaTime,							
+							Time: data.Time,
+						}
+					});
+					 
+				},
+				 
+			},
+			created() {
+				this.$nextTick(() => {
+					this.myChart = echarts.init(document.getElementById('Latency'));
+				})
+				this.websocketInit() 
+			},
+
+		})
+	</script>
+	<style>
+		.el-table .Emergency-row {
+			background: #F56C6C;
+		}
+
+		.el-table .Alert-row {
+			background: oldlace;
+		}
+
+		.el-table .Critical-row {
+			background: #f0f9eb;
+		}
+
+		.el-table .Error-row {
+			background: oldlace;
+		}
+
+		.el-table .Warning-row {
+			background: #E6A23C;
+		}
+
+		.el-table .Notice-row {
+			background: #f0f9eb;
+		}
+
+		.el-table .Informational-row {
+			background: #909399;
+		}
+
+		.el-table .Debug-row {
+			background: #FFFFFF;
+		}
+	</style>
+</html>
