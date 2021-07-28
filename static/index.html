@@ -11,14 +11,20 @@
 	</head>
 	<body>
 		<div id="app">
-			<el-card>
-
+			<el-card 
+				shadow="never" 
+				v-loading="loading" 
+				element-loading-text="网络连接出现了问题,正在拼命连接中……" 
+				element-loading-spinner="el-icon-loading"
+				element-loading-background="rgba(0, 0, 0, 0.8)">
 				<el-card style="margin-bottom: 10px;">
 					<div style="width: 100%;">
 						<el-button type="primary" v-if="connected" size="small" style="width: 200px;">连接成功</el-button>
 						<el-button type="danger" v-else size="small" style="width: 200px;">连接断开</el-button>
 						<el-tag style="margin-bottom: 10px;" type="success">接收记录数：{{syslogCounts.ReceivedCount}}，缓存：{{syslogCounts.ReceivedCached}}</el-tag>
 						<el-tag style="margin-bottom: 10px;" type="success">写入kafka记录数：{{syslogCounts.WriteToKafkaCount}}</el-tag>
+						<el-tag style="margin-bottom: 10px;" type="danger">KafkaAddr:{{SyslogServerConf.KafkaAddr}} | KafkaTopic:{{SyslogServerConf.KafkaTopic}}
+							| ListenTCP:{{SyslogServerConf.ListenTCP}} | ListenUDP:{{SyslogServerConf.ListenUDP}} | SyslogServerNodeName:{{SyslogServerConf.SyslogNodeName}}</el-tag>
 					</div>
 					<div style="width: 100%;">
 						<el-button type="primary" size="small" style="width: 200px;">启动时间：{{StartTime}}</el-button>
@@ -37,7 +43,6 @@
 				<el-card>
 					<div id="CPUMemLatency" style="width:100%;min-width600px;min-height:300px;"></div>
 				</el-card>
-
 			</el-card>
 		</div>
 	</body>
@@ -54,6 +59,8 @@
 					syslogLatencys: {},
 					syslogCPUMEMLatencys: {},
 					StartTime: '',
+					SyslogServerConf: {},
+					loading: false,
 					Latencyoption: {
 						tooltip: {
 							trigger: 'axis'
@@ -134,14 +141,19 @@
 					that.socket.on('connect', function(data) {
 						that.connected = true
 						console.log('connect')
+						that.loading = false
 					})
 					that.socket.on('disconnect', function(data) {
 						that.connected = false
 						console.log('disconnect')
+						that.loading = true
 					});
 
 					that.socket.on('syslogCounts', (data) => {
 						that.syslogCounts = data
+					});
+					that.socket.on('syslogServerConf', (data) => {
+						that.SyslogServerConf = data
 					});
 					that.socket.on('syslogCPUMEMLatencys', (data) => {
 						that.syslogCPUMEMLatencys = {
@@ -191,9 +203,9 @@
 					this.myChart = echarts.init(document.getElementById('Latency'));
 					this.myCPUMemChart = echarts.init(document.getElementById('CPUMemLatency'));
 				})
-				this.websocketInit()				
+				this.websocketInit()
 			},
-			 
+
 		})
 	</script>
 	<style>

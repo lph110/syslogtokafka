@@ -1,1 +1,1 @@
-{"KafkaAddr":"10.3.7.1:9092","KafkaTopic":"syslog","ListenUDP":"0.0.0.0:514","ListenTCP":"0.0.0.0:514","SyslogNodeName":"SyslogNodeName","HttpAddr":"0.0.0.0:80","Debug":"false"}
+{"KafkaAddr":"10.3.7.1:9092","KafkaTopic":"syslog","ListenUDP":"0.0.0.0:514","ListenTCP":"0.0.0.0:514","SyslogNodeName":"SyslogNodeName","HttpAddr":"0.0.0.0:80"}

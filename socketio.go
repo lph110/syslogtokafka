@@ -45,6 +45,7 @@ func socketiorun() {
 		s.SetContext("")
 		s.Join("syslogroom")
 		logger.Info("连接：", s.RemoteAddr().String())
+		socketioServer.BroadcastToRoom("/", "syslogroom", "syslogServerConf", conf)
 		return nil
 	})
 
@@ -68,12 +69,14 @@ func socketiorun() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 	e.Static("/", "static")
+	e.File("/favicon.ico", "images/favicon.ico")
 	e.Any("/socket.io/", func(context echo.Context) error {
 		socketioServer.ServeHTTP(context.Response(), context.Request())
 		return nil
 	})
 
 	e.Logger.Fatal(e.Start(conf.HttpAddr))
+	//e.Logger.Fatal(e.StartAutoTLS(":443"))
 }
 
 //
@@ -94,6 +97,7 @@ func BroadcastMonitor() {
 		t.WriteToKafkaCount = WriteToKafkaCount
 		if socketioServer != nil {
 			socketioServer.BroadcastToRoom("/", "syslogroom", "syslogCounts", t)
+			//socketioServer.BroadcastToRoom("/", "syslogroom", "syslogServerConf", conf)
 		}
 		time.Sleep(1 * time.Second)
 	}

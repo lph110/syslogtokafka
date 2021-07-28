@@ -1,17 +1,15 @@
 package main
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 	"time"
 
-	"net/http"
-	_ "net/http/pprof" // 引入pprof,调用init方法
-
 	"github.com/Shopify/sarama"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/satori/go.uuid"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
@@ -33,6 +31,7 @@ var Receivedcount int64              //缓存
 var WriteToKafkaCount int64          //
 var channelRecv chan format.LogParts // 接收缓存通道
 var StartTime string                 //启动时间
+
 func main() {
 
 	StartTime = time.Now().Format("20060102 15:04:05")
@@ -64,19 +63,7 @@ func main() {
 	if conf.HttpAddr == "" {
 		conf.HttpAddr = "127.0.0.1:80"
 	}
-	if conf.Debug == "" {
-		conf.Debug = "false"
-	}
-	//
-	if conf.Debug == "true" {
-		// 生产环境应仅在本地监听pprof
-		go func() {
-			ip := "0.0.0.0:9527"
-			if err := http.ListenAndServe(ip, nil); err != nil {
-				fmt.Println("开启pprof失败", ip, err)
-			}
-		}()
-	}
+
 	//
 	channelRecv = make(syslog.LogPartsChannel, 100000) // 接收日志通道
 
@@ -148,6 +135,7 @@ func dealSyslog() {
 			}
 		}(kafkaclient)
 		LocalIPAddr := getLocalIP() //本地地址
+		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		for {
 			logParts, ok := <-channelRecv
 			if ok {
@@ -155,6 +143,7 @@ func dealSyslog() {
 				var t SyslogMsg
 				t.RecvTime = time.Now().Format("20060102150405")
 				t.UUID = uuid.Must(uuid.NewV4()).String()
+
 				t.SyslogServerAddr = LocalIPAddr
 				t.SyslogNodeName = conf.SyslogNodeName
 				t.Msgbody = logParts

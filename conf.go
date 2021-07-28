@@ -12,7 +12,6 @@ type Config struct {
 	ListenTCP      string
 	SyslogNodeName string
 	HttpAddr       string
-	Debug          string
 }
 type JsonStruct struct {
 }
